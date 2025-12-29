@@ -1,0 +1,54 @@
+import random
+import time
+import sys
+
+# Set total number of darts (samples) – 1 billion for ~5-6 decimal accuracy
+n = 1_000_000_000  # 1e9 darts → expected error ~8e-5 (see 1/sqrt(n) scaling)
+
+hits = 0                    # Counter for points inside the quarter-circle
+start_time = time.time()    # Record start time for speed/ETA calculations
+
+bar_length = 50             # Length of the progress bar in characters
+update_every = 25_000       # How often to refresh display (every 25k darts → ~40k updates total)
+
+print(f"Throwing {n:,} darts to estimate π... Super-fast updates incoming!\n")
+
+# Main Monte Carlo loop
+for i in range(n):
+    # Generate a random point (x, y) in the unit square [0,1) × [0,1)
+    if random.random()**2 + random.random()**2 <= 1:
+        hits += 1  # Point landed inside (or on) the quarter-circle
+
+    # Update progress display at regular intervals or on final iteration
+    if (i + 1) % update_every == 0 or i == n - 1:
+        current_darts = i + 1                # Darts thrown so far
+        progress = current_darts / n          # Fraction complete (0–1)
+        current_pi = 4 * hits / current_darts # Running π estimate (area ratio × 4)
+
+        # Build ASCII progress bar
+        filled = int(bar_length * progress)
+        bar = '█' * filled + '░' * (bar_length - filled)
+
+        # Timing stats
+        elapsed = time.time() - start_time               # Seconds elapsed
+        rate = current_darts / elapsed if elapsed > 0 else 0  # Darts per second
+        eta = (n - current_darts) / rate if rate > 0 else 0   # Estimated seconds remaining
+
+        # Construct and print the live status line
+        line = (f"[{bar}] {progress:6.2%} | darts: {current_darts:10,} /{n:,} | "
+                f"π ≈ {current_pi:.10f} | hits: {hits:10,} | "
+                f"{rate:8.0f} darts/s | ETA: {eta:4.0f}s")
+        
+        # Overwrite previous line: clear with spaces first, then write new line
+        sys.stdout.write("\r" + " " * 120)  # Clear enough space for any previous output
+        sys.stdout.write("\r" + line)
+        sys.stdout.flush()
+
+# Final timing and results
+total_time = time.time() - start_time
+final_pi = 4 * hits / n  # Final π estimate
+
+print(f"\n\n🏁 Finished in {total_time:.1f} seconds!")
+print(f"Final estimated π ≈ {final_pi:.12f}")
+print(f"Actual π          = 3.141592653589793")
+print(f"Error             = {abs(final_pi - 3.141592653589793):.12f}")
